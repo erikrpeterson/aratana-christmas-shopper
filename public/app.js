@@ -8,11 +8,116 @@ let filteredStatus = 'All';
 let allIdeas = [];
 let currentSearchIdeaId = null;
 
+// --- Auth Gate ---
+let appAuthed = false;
+
+async function checkAuth() {
+  try {
+    const res = await apiFetch(`${API}/auth/status`, { credentials: 'include' });
+    const data = await res.json();
+    appAuthed = data.authed === true;
+    return appAuthed;
+  } catch (e) {
+    appAuthed = false;
+    return false;
+  }
+}
+
+async function doLogin(password) {
+  const res = await apiFetch(`${API}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ password })
+  });
+  const data = await res.json();
+  if (data.success) { appAuthed = true; }
+  return data.success;
+}
+
+async function doLogout() {
+  await apiFetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' });
+  appAuthed = false;
+}
+
+function showAuthGate() {
+  const existing = document.getElementById('authGate');
+  if (existing) { existing.classList.add('active'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'authGate';
+  overlay.className = 'lock-overlay active';
+
+  const modal = document.createElement('div');
+  modal.className = 'lock-modal';
+
+  const title = document.createElement('h2');
+  title.textContent = 'Access Required';
+
+  const desc = document.createElement('p');
+  desc.textContent = 'Enter the access password to view the Christmas list.';
+
+  const input = document.createElement('input');
+  input.type = 'password';
+  input.className = 'lock-input';
+  input.id = 'authGateInput';
+  input.placeholder = 'Password';
+
+  const error = document.createElement('div');
+  error.className = 'lock-error';
+  error.id = 'authGateError';
+
+  const actions = document.createElement('div');
+  actions.className = 'modal-actions';
+
+  const submit = document.createElement('button');
+  submit.type = 'button';
+  submit.className = 'btn btn-primary';
+  submit.textContent = 'Enter';
+  submit.onclick = async () => {
+    const pwd = document.getElementById('authGateInput').value;
+    if (!pwd) return;
+    submit.disabled = true;
+    submit.textContent = 'Checking...';
+    const ok = await doLogin(pwd);
+    if (ok) {
+      overlay.classList.remove('active');
+      overlay.remove();
+      await Promise.all([loadRecipients(), loadStats(), loadIdeas()]);
+      render();
+    } else {
+      document.getElementById('authGateError').textContent = 'Incorrect password';
+      submit.disabled = false;
+      submit.textContent = 'Enter';
+    }
+  };
+
+  actions.appendChild(submit);
+  modal.appendChild(title);
+  modal.appendChild(desc);
+  modal.appendChild(input);
+  modal.appendChild(error);
+  modal.appendChild(actions);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  input.focus();
+  input.addEventListener('keypress', (e) => { if (e.key === 'Enter') submit.click(); });
+}
+
+// Helper that sends the session cookie with every API call
+async function apiFetch(url, opts = {}) {
+  opts = { credentials: 'include', ...opts };
+  return fetch(url, opts);
+}
+
 // --- Initialize ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
   updatePinUI();
-  Promise.all([loadRecipients(), loadStats(), loadIdeas()]).then(render);
+  const authed = await checkAuth();
+  if (!authed) { showAuthGate(); return; }
+  await Promise.all([loadRecipients(), loadStats(), loadIdeas()]);
+  render();
 });
 
 // --- Event Listeners ---
@@ -136,7 +241,7 @@ async function handleLockSubmit(mode) {
   if (!/^\d{4,6}$/.test(pin)) { error.textContent = 'PIN must be 4-6 digits'; return; }
 
   const endpoints = { set: '/api/lock/set-pin', unlock: '/api/lock/unlock', clear: '/api/lock/clear-pin' };
-  const res = await fetch(endpoints[mode] || '/api/lock/clear-pin', {
+  const res = await apiFetch(endpoints[mode] || '/api/lock/clear-pin', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pin })
@@ -204,7 +309,7 @@ async function handleEditRecipient() {
     budget: fd.get('budget') ? parseFloat(fd.get('budget')) : 0,
   };
   try {
-    const res = await fetch(`${API}/recipients/${recipientId}`, {
+    const res = await apiFetch(`${API}/recipients/${recipientId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(recipient)
     });
     if (res.ok) {
@@ -224,21 +329,21 @@ function closeSearchModal() {
 // --- Data Loading ---
 async function loadRecipients() {
   try {
-    const res = await fetch(`${API}/recipients`);
+    const res = await apiFetch(`${API}/recipients`);
     recipients = await res.json();
   } catch (e) { recipients = []; }
 }
 
 async function loadStats() {
   try {
-    const res = await fetch(`${API}/stats`);
+    const res = await apiFetch(`${API}/stats`);
     stats = await res.json();
   } catch (e) { stats = {}; }
 }
 
 async function loadIdeas() {
   try {
-    const res = await fetch(`${API}/ideas`);
+    const res = await apiFetch(`${API}/ideas`);
     allIdeas = await res.json();
   } catch (e) { allIdeas = []; }
 }
@@ -258,7 +363,7 @@ async function handleAddRecipient(e) {
     budget: fd.get('budget') ? parseFloat(fd.get('budget')) : 0,
   };
   try {
-    const res = await fetch(`${API}/recipients`, {
+    const res = await apiFetch(`${API}/recipients`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(recipient)
     });
     if (res.ok) {
@@ -367,7 +472,7 @@ async function addQuickIdea(recipient, parsed) {
     actualPrice: parsed.price || null,
     dateAdded: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
-  const res = await fetch(`${API}/ideas`, {
+  const res = await apiFetch(`${API}/ideas`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(idea)
   });
   if (res.ok) {
@@ -383,7 +488,7 @@ async function handleProductSearch() {
   const query = input.value.trim();
   if (!query) return;
 
-  const res = await fetch(`${API}/search`, {
+  const res = await apiFetch(`${API}/search`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query })
   });
   const data = await res.json();
@@ -452,7 +557,7 @@ async function selectProduct(title, url, price, source) {
   try {
     if (currentSearchIdeaId) {
       // Attach product details to the existing idea being edited
-      const res = await fetch(`${API}/ideas/${currentSearchIdeaId}`, {
+      const res = await apiFetch(`${API}/ideas/${currentSearchIdeaId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: cleanUrl, query: cleanUrl, price: numericPrice, store: source || null })
@@ -475,7 +580,7 @@ async function selectProduct(title, url, price, source) {
         actualPrice: numericPrice || null,
         dateAdded: new Date().toISOString().slice(0, 19).replace('T', ' '),
       };
-      const res = await fetch(`${API}/ideas`, {
+      const res = await apiFetch(`${API}/ideas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(idea)
@@ -719,7 +824,7 @@ async function generateIdeas(recipientId) {
   const recipient = recipients.find(r => r.id === recipientId);
   if (!recipient) return;
   try {
-    const res = await fetch(`${API}/recipients/${recipientId}/ideas`);
+    const res = await apiFetch(`${API}/recipients/${recipientId}/ideas`);
     const data = await res.json();
     if (data.ideas?.length) {
       for (const idea of data.ideas) { await addIdeaFromServer(idea); }
@@ -730,7 +835,7 @@ async function generateIdeas(recipientId) {
 }
 
 async function addIdeaFromServer(idea) {
-  return fetch(`${API}/ideas`, {
+  return apiFetch(`${API}/ideas`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(idea)
   }).then(res => res.json());
 }
@@ -745,7 +850,7 @@ async function updateIdeaStatus(ideaId) {
   if (next === 'Ordered' && (!idea.actualPrice || idea.actualPrice === 0)) {
     payload.actualPrice = idea.price || 0;
   }
-  await fetch(`${API}/ideas/${ideaId}`, {
+  await apiFetch(`${API}/ideas/${ideaId}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
   });
   await Promise.all([loadIdeas(), loadStats()]);
@@ -754,7 +859,7 @@ async function updateIdeaStatus(ideaId) {
 
 async function resetIdeaStatus(ideaId) {
   if (!confirm('Reset this gift back to "Idea" status?')) return;
-  await fetch(`${API}/ideas/${ideaId}`, {
+  await apiFetch(`${API}/ideas/${ideaId}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Idea' })
   });
   await Promise.all([loadIdeas(), loadStats()]);
@@ -763,7 +868,7 @@ async function resetIdeaStatus(ideaId) {
 
 async function deleteIdea(ideaId) {
   if (!confirm('Delete this gift idea permanently?')) return;
-  await fetch(`${API}/ideas/${ideaId}`, {
+  await apiFetch(`${API}/ideas/${ideaId}`, {
     method: 'DELETE'
   });
   await Promise.all([loadIdeas(), loadStats()]);
@@ -771,7 +876,7 @@ async function deleteIdea(ideaId) {
 }
 
 async function updateIdeaStore(input, ideaId) {
-  await fetch(`${API}/ideas/${ideaId}`, {
+  await apiFetch(`${API}/ideas/${ideaId}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store: input.value })
   });
   await loadIdeas();
@@ -780,7 +885,7 @@ async function updateIdeaStore(input, ideaId) {
 async function updateIdeaName(input, ideaId) {
   const name = (input.value || '').trim();
   if (!name) return;
-  const res = await fetch(`${API}/ideas/${ideaId}`, {
+  const res = await apiFetch(`${API}/ideas/${ideaId}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
   });
   if (res.ok) {
@@ -791,7 +896,7 @@ async function updateIdeaName(input, ideaId) {
 
 async function updateIdeaPrice(input, ideaId) {
   const price = parseFloat(input.value) || 0;
-  await fetch(`${API}/ideas/${ideaId}`, {
+  await apiFetch(`${API}/ideas/${ideaId}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ actualPrice: price })
   });
   await Promise.all([loadIdeas(), loadStats()]);
@@ -811,7 +916,7 @@ function openProductPicker(ideaId) {
 
 function deleteRecipient(id) {
   if (!confirm('Delete this recipient and all their gift ideas?')) return;
-  fetch(`${API}/recipients/${id}`, { method: 'DELETE' })
+  apiFetch(`${API}/recipients/${id}`, { method: 'DELETE' })
     .then(() => Promise.all([loadRecipients(), loadStats(), loadIdeas()]))
     .then(render);
 }

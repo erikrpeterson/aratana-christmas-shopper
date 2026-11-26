@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, session
 from pathlib import Path
 import json
 import hashlib
@@ -19,6 +19,7 @@ except Exception:
     pass
 
 app = Flask(__name__, static_folder='public', static_url_path='')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'christmas-list-secret-change-me')
 
 BASE_DIR = Path(__file__).parent
 DATA_FILE = BASE_DIR / 'data' / 'gifts.json'
@@ -96,6 +97,40 @@ def save_data(data):
         json.dump(data, f, indent=2)
 
 db = load_data()
+
+# ---------- Access Gate (password for internet exposure) ----------
+ACCESS_PASSWORD = os.environ.get('ACCESS_PASSWORD') or 'changeme-set-env-var'
+
+def is_authenticated():
+    return bool(session.get('authed'))
+
+@app.before_request
+def require_api_auth():
+    # Protect all API routes with the access password (unless exempt)
+    if request.path.startswith('/api/'):
+        if request.path in ('/api/auth/login', '/api/auth/logout') or request.path.startswith('/api/auth/'):
+            return None
+        if not is_authenticated():
+            return jsonify({"error": "unauthorized", "authRequired": True}), 401
+    return None
+
+@app.post('/api/auth/login')
+def api_login():
+    data = request.json or {}
+    password = data.get('password') or ''
+    if password == ACCESS_PASSWORD:
+        session['authed'] = True
+        return jsonify({"success": True, "authRequired": True})
+    return jsonify({"success": False, "error": "Invalid password"}), 401
+
+@app.post('/api/auth/logout')
+def api_logout():
+    session.pop('authed', None)
+    return jsonify({"success": True})
+
+@app.get('/api/auth/status')
+def api_status():
+    return jsonify({"authRequired": True, "authed": is_authenticated()})
 
 # ---------- PIN Lock ----------
 def hash_pin(pin):
