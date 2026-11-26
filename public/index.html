@@ -153,6 +153,47 @@
       </div>
     </div>
 
+    <!-- Edit Recipient Modal -->
+    <div class="modal" id="editRecipientModal" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3>Edit Recipient</h3>
+        <form id="editRecipientForm">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" name="name" required placeholder="e.g. Mom">
+          </div>
+          <div class="form-group">
+            <label>Relationship</label>
+            <input type="text" name="relationship" required placeholder="e.g. Mother">
+          </div>
+          <div class="form-group">
+            <label>Age (optional, if kid)</label>
+            <input type="number" name="age" min="0" max="120" placeholder="Leave blank for adults">
+          </div>
+          <div class="form-group">
+            <label>Interests (comma-separated)</label>
+            <input type="text" name="interests" placeholder="e.g. baking, reading, hiking">
+          </div>
+          <div class="form-group">
+            <label>Dislikes/Allergies (comma-separated, optional)</label>
+            <input type="text" name="dislikes" placeholder="e.g. peanuts, shellfish">
+          </div>
+          <div class="form-group">
+            <label>Allergies (comma-separated, optional)</label>
+            <input type="text" name="allergies" placeholder="e.g. peanuts, shellfish">
+          </div>
+          <div class="form-group">
+            <label>Budget ($)</label>
+            <input type="number" name="budget" min="0" step="5" placeholder="e.g. 50">
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-cancel" onclick="closeEditRecipientModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" onclick="handleEditRecipient()">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Product Search Modal -->
     <div class="modal" id="productSearchModal" role="dialog" aria-modal="true">
       <div class="modal-content modal-wide">

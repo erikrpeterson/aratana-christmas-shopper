@@ -186,7 +186,9 @@ def get_ideas_for(recipient_id):
     r = next((r for r in db.get('recipients', []) if r['id'] == recipient_id), None)
     if not r:
         return jsonify({"error": "Not found"}), 404
-    ideas = generate_ideas_for(r)
+    # Exclude gifts already in the list
+    existing_names = [i.get('name', '') for i in db.get('ideas', []) if i.get('recipientId') == recipient_id]
+    ideas = generate_ideas_for(r, exclude_names=existing_names)
     return jsonify({"ideas": ideas, "remainingBudget": remaining_budget(r)})
 
 @app.post('/api/ideas')
@@ -374,7 +376,9 @@ def age_band_score(gift, band):
     return score
 
 
-def generate_ideas_for(recipient):
+def generate_ideas_for(recipient, exclude_names=None):
+    """Generate gift ideas for a recipient, excluding any names in exclude_names."""
+    exclude = set(n.lower() for n in (exclude_names or []))
     remaining = remaining_budget(recipient)
     tags = [str(t).lower() for t in (recipient.get('interests') or [])]
     dislikes = [str(d).lower() for d in (recipient.get('dislikes') or [])]
@@ -383,6 +387,8 @@ def generate_ideas_for(recipient):
 
     scored = []
     for g in GIFT_CATALOG:
+        if g['name'].lower() in exclude:
+            continue
         score = 0
         g_tags = [t.lower() for t in g.get('tags', [])]
 

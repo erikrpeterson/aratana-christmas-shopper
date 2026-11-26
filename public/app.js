@@ -21,6 +21,7 @@ function setupEventListeners() {
   document.getElementById('addRecipientModalBtn').addEventListener('click', openModal);
   document.getElementById('closeModalBtn').addEventListener('click', closeModal);
   document.getElementById('recipientForm').addEventListener('submit', handleAddRecipient);
+  document.getElementById('editRecipientForm').addEventListener('submit', handleEditRecipient);
 
   document.getElementById('pinToggleBtn').addEventListener('click', togglePinLock);
 
@@ -168,6 +169,51 @@ function openModal() {
 }
 function closeModal() {
   document.getElementById('addRecipientModal').classList.remove('active');
+}
+
+function openEditRecipientModal(recipientId) {
+  const recipient = recipients.find(r => r.id === recipientId);
+  if (!recipient) return;
+  const form = document.getElementById('editRecipientForm');
+  form.dataset.recipientId = recipientId;
+  form.querySelector('input[name="name"]').value = recipient.name || '';
+  form.querySelector('input[name="relationship"]').value = recipient.relationship || '';
+  form.querySelector('input[name="age"]').value = recipient.age !== null && recipient.age !== undefined ? recipient.age : '';
+  form.querySelector('input[name="interests"]').value = (recipient.interests || []).join(', ');
+  form.querySelector('input[name="dislikes"]').value = (recipient.dislikes || []).join(', ');
+  form.querySelector('input[name="budget"]').value = recipient.budget || 0;
+  document.getElementById('editRecipientModal').classList.add('active');
+}
+
+function closeEditRecipientModal() {
+  document.getElementById('editRecipientModal').classList.remove('active');
+}
+
+async function handleEditRecipient() {
+  const form = document.getElementById('editRecipientForm');
+  const recipientId = form.dataset.recipientId;
+  if (!recipientId) return;
+  const fd = new FormData(form);
+  const recipient = {
+    name: fd.get('name'),
+    relationship: fd.get('relationship'),
+    age: fd.get('age') ? parseInt(fd.get('age')) : null,
+    interests: fd.get('interests') ? fd.get('interests').split(',').map(s => s.trim()).filter(Boolean) : [],
+    dislikes: fd.get('dislikes') ? fd.get('dislikes').split(',').map(s => s.trim()).filter(Boolean) : [],
+    allergies: fd.get('allergies') ? fd.get('allergies').split(',').map(s => s.trim()).filter(Boolean) : [],
+    budget: fd.get('budget') ? parseFloat(fd.get('budget')) : 0,
+  };
+  try {
+    const res = await fetch(`${API}/recipients/${recipientId}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(recipient)
+    });
+    if (res.ok) {
+      closeEditRecipientModal();
+      await loadRecipients();
+      await loadStats();
+      render();
+    }
+  } catch (err) { console.error(err); }
 }
 function closeSearchModal() {
   document.getElementById('productSearchModal').classList.remove('active');
@@ -565,6 +611,7 @@ function renderRecipients() {
         <div class="recipient-actions" style="pointer-events: ${pointerEvents}">
           <button class="btn btn-small" onclick="generateIdeas('${r.id}')">Generate</button>
           <button class="btn btn-small btn-primary" onclick="viewCards('${r.id}')">View Gifts</button>
+          <button class="btn btn-small" onclick="openEditRecipientModal('${r.id}')">Edit</button>
           <button class="btn btn-small btn-danger" onclick="deleteRecipient('${r.id}')">Delete</button>
         </div>
       </div>
@@ -893,6 +940,9 @@ window.updateIdeaPrice = updateIdeaPrice;
 window.openProductPicker = openProductPicker;
 window.selectProduct = selectProduct;
 window.confirmQuickAdd = confirmQuickAdd;
+window.openEditRecipientModal = openEditRecipientModal;
+window.closeEditRecipientModal = closeEditRecipientModal;
+window.handleEditRecipient = handleEditRecipient;
 window.resetIdeaStatus = resetIdeaStatus;
 window.deleteIdea = deleteIdea;
 
