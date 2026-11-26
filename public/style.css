@@ -1090,17 +1090,75 @@ body::before {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .app { padding: 0 16px 32px; }
-  .app-header { flex-wrap: wrap; gap: 16px; padding: 16px 0; }
-  .app-header h1 { font-size: 1.2rem; }
+  .app { padding: 0 14px 32px; }
+  .app-header { flex-wrap: wrap; gap: 12px; padding: 16px 0; }
+  .app-header h1 { font-size: 1.15rem; }
+
+  /* Header buttons wrap nicely into full-width rows */
+  .header-right {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .header-right .btn {
+    flex: 1 1 auto;
+    min-height: 40px;
+    font-size: 0.8rem;
+  }
+  .header-right .pin-lock { flex: 1 1 100%; }
+  .header-right .pin-btn { width: 100%; min-height: 40px; }
+
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat-card { padding: 14px 16px; }
+  .stat-value { font-size: 1.4rem; }
+
+  .quick-add-bar { flex-wrap: wrap; padding: 12px 14px; gap: 10px; }
+  #quickAddInput { flex-basis: 100%; min-height: 44px; }
+  .quick-add-bar .btn { flex: 1 1 100%; min-height: 44px; }
+
+  .tab-nav { width: 100%; }
+  .tab-btn { flex: 1; justify-content: center; padding: 12px 8px; }
+
   .recipients-grid { grid-template-columns: 1fr; }
   .cards-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .quick-add-bar { flex-wrap: wrap; }
-  #quickAddInput { flex-basis: 100%; }
   .runs-layout { grid-template-columns: 1fr; }
+
   .filter-pills { width: 100%; }
+  .section-header { gap: 10px; }
+
+  .recipient-actions { flex-wrap: wrap; }
+  .recipient-actions .btn { min-height: 40px; }
+
+  .idea-actions .btn { min-height: 40px; }
+  .idea-fields { grid-template-columns: 1fr; }
+
+  .modal { padding: 12px; }
+  .modal-content { padding: 20px; max-height: 92vh; }
+
+  /* Prevent iOS auto-zoom on input focus (needs >=16px) */
+  input, select, textarea, #quickAddInput, #productSearchInput, .lock-input {
+    font-size: 16px !important;
+  }
 }
+
+/* Small phones */
+@media (max-width: 420px) {
+  .app-header h1 { font-size: 1.05rem; }
+  .header-right .btn { flex: 1 1 48%; }
+  .stats-grid { gap: 8px; }
+  .stat-value { font-size: 1.25rem; }
+  .stat-label { font-size: 0.65rem; }
+  .tab-btn { font-size: 0.8rem; }
+  .idea-actions .btn { min-width: 0; flex: 1 1 100%; }
+}
+
+/* Prevent horizontal scrolling on mobile */
+html, body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+img, input, button { max-width: 100%; }
+
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
