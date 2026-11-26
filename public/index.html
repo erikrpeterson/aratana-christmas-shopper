@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Christmas List Generator & Shopper</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <h1><span class="icon">🎄</span> Christmas List Generator</h1>
+      </div>
+      <div class="header-right">
+        <button id="exportCsvBtn" class="btn btn-small">Export CSV</button>
+        <button id="exportJsonBtn" class="btn btn-small">Export JSON</button>
+        <button id="addRecipientBtn" class="btn btn-add">Add Recipient</button>
+        <div class="pin-lock">
+          <button class="pin-btn" id="pinToggleBtn" aria-pressed="false">
+            <span class="icon">🔒</span>
+            <span>PIN Lock: Off</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Quick-Add Bar -->
+    <div class="quick-add-bar" id="quickAddBar">
+      <span class="quick-add-icon">⚡</span>
+      <input type="text" id="quickAddInput" placeholder="Quick-add: paste a URL or type e.g. &quot;Lego Star Wars set $45 Target for Leo&quot;">
+      <button class="btn btn-add" id="quickAddBtn">Quick Add</button>
+    </div>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav" id="tabNav">
+      <button class="tab-btn active" data-tab="gifts">🎁 Gifts</button>
+      <button class="tab-btn" data-tab="runs">🛒 Shopping Runs</button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="app-main">
+      <!-- GIFTS TAB -->
+      <div class="tab-panel active" id="tabGifts">
+        <section class="recipients-section" id="recipientsSection">
+          <div class="section-header">
+            <h2>Recipients <span class="count-badge" id="recipientCount">0</span></h2>
+            <button class="btn btn-small" id="addRecipientModalBtn">Add New</button>
+          </div>
+          <div class="recipients-grid" id="recipientsGrid">
+            <!-- Recipients rendered here -->
+          </div>
+        </section>
+
+        <section class="stats-section" id="statsSection">
+          <div class="stats-grid">
+            <div class="stat-card" id="statTotalSpend">
+              <div class="stat-value" id="totalSpend">$0</div>
+              <div class="stat-label">Total Spent</div>
+            </div>
+            <div class="stat-card" id="statBudget">
+              <div class="stat-value" id="totalBudget">$0</div>
+              <div class="stat-label">Total Budget</div>
+            </div>
+            <div class="stat-card" id="statRemaining">
+              <div class="stat-value" id="remainingBudget">$0</div>
+              <div class="stat-label">Remaining</div>
+            </div>
+            <div class="stat-card" id="statRecipients">
+              <div class="stat-value" id="recipientsCount">0</div>
+              <div class="stat-label">Recipients</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Recipient Cards / Gift Cards -->
+        <section class="cards-section" id="cardsSection" style="display: none;">
+          <div class="section-header">
+            <h2>Gift Ideas & Shopping <span class="icon">🎁</span></h2>
+            <!-- Status Filter Pills -->
+            <div class="filter-pills" id="filterPills">
+              <button class="pill active" data-filter="All">All</button>
+              <button class="pill" data-filter="Idea">Needs Ordering</button>
+              <button class="pill" data-filter="Ordered">In Transit</button>
+              <button class="pill" data-filter="Arrived">Needs Wrapping</button>
+            </div>
+          </div>
+          <div class="cards-grid" id="cardsGrid">
+            <!-- Cards rendered here -->
+          </div>
+        </section>
+      </div>
+
+      <!-- SHOPPING RUNS TAB -->
+      <div class="tab-panel" id="tabRuns">
+        <section class="runs-section">
+          <div class="section-header">
+            <h2>Shopping Runs <span class="icon">🛒</span></h2>
+            <p class="runs-subtitle">Unpurchased (Idea) items grouped by store, split into Online Orders vs In-Store Runs</p>
+          </div>
+          <div class="runs-layout">
+            <div class="runs-column" id="onlineRunsColumn">
+              <h3 class="runs-column-title">🌐 Online Orders</h3>
+              <div id="onlineRunsList"></div>
+            </div>
+            <div class="runs-column" id="instoreRunsColumn">
+              <h3 class="runs-column-title">🏬 In-Store Runs</h3>
+              <div id="instoreRunsList"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Add Recipient Modal -->
+    <div class="modal" id="addRecipientModal" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3>Add New Recipient</h3>
+        <form id="recipientForm">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" name="name" required placeholder="e.g. Mom">
+          </div>
+          <div class="form-group">
+            <label>Relationship</label>
+            <input type="text" name="relationship" required placeholder="e.g. Mother">
+          </div>
+          <div class="form-group">
+            <label>Age (optional, if kid)</label>
+            <input type="number" name="age" min="0" max="120" placeholder="Leave blank for adults">
+          </div>
+          <div class="form-group">
+            <label>Interests (comma-separated)</label>
+            <input type="text" name="interests" placeholder="e.g. baking, reading, hiking">
+          </div>
+          <div class="form-group">
+            <label>Dislikes/Allergies (comma-separated, optional)</label>
+            <input type="text" name="dislikes" placeholder="e.g. peanuts, shellfish">
+          </div>
+          <div class="form-group">
+            <label>Budget ($)</label>
+            <input type="number" name="budget" min="0" step="5" placeholder="e.g. 50">
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-cancel" id="closeModalBtn">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add Recipient</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Product Search Modal -->
+    <div class="modal" id="productSearchModal" role="dialog" aria-modal="true">
+      <div class="modal-content modal-wide">
+        <h3>Find Products</h3>
+        <div class="search-bar">
+          <input type="text" id="productSearchInput" placeholder="Search for products...">
+          <button class="btn btn-primary" id="productSearchBtn">Search</button>
+        </div>
+        <div class="search-results" id="searchResults">
+          <p class="empty-hint">Click "Search" to find products from Brave/SerpAPI, or clean search URLs for Google Shopping, Amazon, Target & more.</p>
+        </div>
+        <div class="rate-limit-notice" id="rateLimitNotice" style="display:none;">
+          <span id="rateLimitMessage">API limit reached — showing estimated results.</span>
+          <button type="button" class="btn btn-small" onclick="document.getElementById('rateLimitNotice').style.display='none'">Dismiss</button>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-cancel" id="closeSearchModalBtn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick-Add Recipient Picker Modal -->
+    <div class="modal" id="quickAddRecipientModal" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3>Choose Recipient</h3>
+        <p class="modal-hint" id="quickAddParsedText"></p>
+        <div class="recipient-picker-list" id="recipientPickerList"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-cancel" id="quickAddCancelBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

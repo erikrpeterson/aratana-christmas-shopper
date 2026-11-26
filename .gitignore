@@ -1,0 +1,14 @@
+node_modules/
+npm-debug.log/
+.env
+.env.local
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.DS_Store
+*.swp
+*.swo
+.venv/
+venv/
